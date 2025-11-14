@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Insta Downloader</title>
+    <title>Mobile Media Downloader</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -20,203 +18,142 @@
             justify-content: flex-start;
             padding-top: 2rem;
         }
-        /* Custom spinner for better visibility */
-        .animate-spin-custom {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
 
 <div id="app" class="container max-w-lg mx-auto p-4 sm:p-6">
     <header class="text-center mb-8">
-        <h1 class="text-4xl font-extrabold text-indigo-700">Insta Fetcher</h1>
-        <p class="text-gray-500 mt-2">Paste a media URL below to find downloadable content.</p>
+        <h1 class="text-3xl font-bold text-indigo-700">Mobile Media Fetcher</h1>
+        <p class="text-gray-500 mt-1">Paste an Instagram URL below to find media.</p>
     </header>
 
-    <div class="bg-white p-6 rounded-xl shadow-2xl w-full">
-        <div id="messageBox" class="hidden p-4 mb-4 border rounded-lg flex items-center">
-            <!-- Messages (errors/success/info) are displayed here -->
-        </div>
-
+    <div class="bg-white p-6 rounded-xl shadow-lg w-full">
         <div class="mb-4">
-            <!-- Corrected the incomplete label class below -->
-            <label for="urlInput" class="block text-sm font-medium text-gray-700">Insta URL</label>
-            <input type="url" id="urlInput" value="" placeholder="Paste the link here..." class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+            <label for="urlInput" class="block text-sm font-medium text-gray-700 mb-2">Instagram URL</label>
+            <input type="url" id="urlInput" placeholder="https://www.instagram.com/p/..." class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150" />
         </div>
 
-        <button id="fetchButton" onclick="fetchMedia()" class="w-full py-3 px-4 bg-indigo-600 text-white font-semibold rounded-xl shadow-lg hover:bg-indigo-700 transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 mt-4 flex items-center justify-center">
-            <span id="buttonText">Find Media</span>
-            <div id="loadingIndicator" class="hidden h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin-custom ml-2"></div>
-        </button>
-
-        <!-- Clear All Button -->
-        <button id="clearButton" onclick="clearAll()" class="w-full py-3 px-4 bg-gray-200 text-gray-700 font-semibold rounded-xl shadow-md hover:bg-gray-300 transition duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 mt-2">
-            Clear All
+        <button id="fetchButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg shadow-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50" onclick="fetchMedia()">
+            <span id="buttonText">Fetch Content</span>
+            <span id="loadingIndicator" class="hidden">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+            </span>
         </button>
     </div>
 
-    <!-- Results Area -->
-    <div id="results" class="mt-8">
-        <!-- Fetched content/mock results will be displayed here -->
+    <div id="statusMessage" class="mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-md hidden" role="alert"></div>
+
+    <div id="resultsContainer" class="mt-6 space-y-4">
+        <!-- Download links will be dynamically injected here -->
     </div>
 
-    <!-- User Information in Footer -->
-    <footer class="mt-16 text-center text-sm text-gray-500 p-4">
-        <p class="mb-1">&copy; 2025 Insta Fetcher</p>
-        <p class="text-gray-700 font-medium">Gayashan Pananwala | <a href="mailto:pgpcgp@gmail.com" class="text-indigo-600 hover:underline">pgpcgp@gmail.com</a></p>
+    <footer class="mt-auto pt-8 text-center text-xs text-gray-500 border-t border-gray-200 pt-4">
+        <p class="mb-2">Gayashan Pananwala | pgpcgp@gmail.com</p>
     </footer>
 </div>
 
 <script>
-    // --- Helper Functions ---
+    const API_URL = "https://delirius-apiofc.vercel.app/download/instagram";
+    const urlInput = document.getElementById('urlInput');
+    const fetchButton = document.getElementById('fetchButton');
+    const buttonText = document.getElementById('buttonText');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const statusMessage = document.getElementById('statusMessage');
+    const resultsContainer = document.getElementById('resultsContainer');
 
-    /**
-     * Shows a colored message box at the top of the app.
-     * @param {('error'|'success'|'info')} type - The type of message.
-     * @param {string} message - The message content.
-     */
-    function showMessage(type, message) {
-        const messageBox = document.getElementById('messageBox');
-        let colorClass, iconHtml;
-
-        switch (type) {
-            case 'error':
-                colorClass = 'bg-red-100 border-red-400 text-red-700';
-                iconHtml = '<svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
-                break;
-            case 'success':
-                colorClass = 'bg-green-100 border-green-400 text-green-700';
-                iconHtml = '<svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
-                break;
-            case 'info':
-            default:
-                colorClass = 'bg-blue-100 border-blue-400 text-blue-700';
-                iconHtml = '<svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
-                break;
+    // Helper to display messages (like your print("Failed: ", e))
+    function showMessage(text, isError = false) {
+        statusMessage.textContent = text;
+        statusMessage.className = isError 
+            ? 'mt-4 p-4 bg-red-100 text-red-800 rounded-lg shadow-md block' 
+            : 'mt-4 p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-md block';
+        // Hide after 5 seconds if not an error
+        if (!isError) {
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
         }
-
-        messageBox.className = `p-4 mb-4 border rounded-xl shadow-lg flex items-center transition-all ${colorClass}`;
-        messageBox.innerHTML = `${iconHtml}<span>${message}</span>`;
-        messageBox.classList.remove('hidden');
     }
 
-    /**
-     * Toggles the loading state of the fetch button.
-     * @param {boolean} isLoading - True to show spinner and disable button.
-     */
-    function toggleLoading(isLoading) {
-        const fetchButton = document.getElementById('fetchButton');
-        const buttonText = document.getElementById('buttonText');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const clearButton = document.getElementById('clearButton');
-
+    // Function to set loading state
+    function setLoading(isLoading) {
         fetchButton.disabled = isLoading;
-        clearButton.disabled = isLoading;
-
         if (isLoading) {
             buttonText.classList.add('hidden');
             loadingIndicator.classList.remove('hidden');
-            fetchButton.classList.add('opacity-75', 'cursor-not-allowed');
+            statusMessage.classList.add('hidden');
+            resultsContainer.innerHTML = '';
         } else {
             buttonText.classList.remove('hidden');
             loadingIndicator.classList.add('hidden');
-            fetchButton.classList.remove('opacity-75', 'cursor-not-allowed');
         }
     }
 
-    // --- Main Logic ---
-
-    /**
-     * Handles the "Find Media" button click.
-     * NOTE: This function uses a simulation as real-world media fetching from major platforms
-     * requires a dedicated server or API (due to client-side CORS and scraping restrictions).
-     */
     async function fetchMedia() {
-        const urlInput = document.getElementById('urlInput');
         const url = urlInput.value.trim();
-        const resultsDiv = document.getElementById('results');
-        resultsDiv.innerHTML = ''; // Clear previous results
-
         if (!url) {
-            showMessage('error', 'Please enter a URL to analyze.');
+            showMessage("Please enter a valid Instagram URL.", true);
             return;
         }
 
-        // Basic URL validation
-        try {
-            new URL(url);
-        } catch (_) {
-             showMessage('error', 'Invalid URL format. Please ensure the link is complete.');
-             return;
-        }
-
-        toggleLoading(true);
-        showMessage('info', `Simulating API connection for: ${url.substring(0, 30)}...`);
-
-        // Simulate network and processing delay
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        setLoading(true);
+        resultsContainer.innerHTML = ''; // Clear previous results
 
         try {
-            // --- Placeholder Result ---
-            // In a real application, this would be an API call to your backend.
-            const mockMedia = {
-                type: 'Video (MP4)',
-                source: 'https://placehold.co/400x300/3B82F6/ffffff?text=Fetched+Video',
-                filename: 'mobile_download_2024.mp4'
-            };
+            const response = await fetch(`${API_URL}?url=${encodeURIComponent(url)}`, {
+                method: 'GET',
+                // Mimicking the Python script's timeout logic
+                signal: AbortSignal.timeout(30000) 
+            });
 
-            const resultHtml = `
-                <div class="p-6 bg-blue-50 rounded-xl border border-blue-200 shadow-md">
-                    <h3 class="text-2xl font-bold text-blue-700 mb-3">Media Ready to Download</h3>
-                    <p class="text-sm text-gray-600 mb-3">Found content from: <span class="font-semibold">${url.split('/')[2]}</span></p>
+            if (!response.ok) {
+                throw new Error(`API returned status code: ${response.status}`);
+            }
 
-                    <div class="p-4 bg-white rounded-lg border border-gray-100 mb-4">
-                        <p class="text-sm font-medium text-gray-800">File Type: <span class="font-normal">${mockMedia.type}</span></p>
-                        <p class="text-sm font-medium text-gray-800">Suggested Name: <span class="font-normal">${mockMedia.filename}</span></p>
+            const jsonResponse = await response.json();
+            const items = jsonResponse.data || [];
+            
+            showMessage(`Found ${items.length} item(s). Click to download.`);
+
+            if (items.length === 0) {
+                showMessage("No downloadable items found or the URL is invalid.", true);
+                return;
+            }
+
+            items.forEach((item, index) => {
+                const mediaUrl = item.url;
+                const mediaType = item.type || 'video';
+                const ext = mediaType === 'video' ? 'mp4' : 'jpg';
+                const timeStamp = new Date().getTime(); // Simpler timestamp for uniqueness
+                const suggestedFileName = `insta_media_${timeStamp}_${index + 1}.${ext}`;
+
+                const resultCard = `
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 flex items-center justify-between shadow-sm">
+                        <span class="text-sm font-medium text-gray-700">
+                            Item ${index + 1} (${mediaType})
+                        </span>
+                        <a href="${mediaUrl}" download="${suggestedFileName}" 
+                           class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg text-sm transition duration-150">
+                            Download .${ext.toUpperCase()}
+                        </a>
                     </div>
+                `;
+                resultsContainer.insertAdjacentHTML('beforeend', resultCard);
+            });
 
-                    <img src="${mockMedia.source}" class="mt-3 w-full rounded-lg shadow-lg border-2 border-blue-300" alt="Fetched Media Placeholder" onerror="this.onerror=null;this.src='https://placehold.co/400x300/EF4444/ffffff?text=Preview+Unavailable'">
-
-                    <a href="${mockMedia.source}" download="${mockMedia.filename}" class="mt-4 inline-block w-full text-center py-3 bg-blue-600 text-white text-lg font-bold rounded-xl hover:bg-blue-700 transition transform hover:scale-[1.01]">
-                        <svg class="w-6 h-6 inline mr-2 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Download Now
-                    </a>
-                </div>
-            `;
-            resultsDiv.innerHTML = resultHtml;
-            showMessage('success', 'Media analyzed! Scroll down to download your file.');
-
-        } catch (e) {
-            resultsDiv.innerHTML = '';
-            showMessage('error', 'Could not process the URL. Please check the link or try another platform.');
-            console.error(e);
+        } catch (error) {
+            console.error("Fetch failed:", error);
+            showMessage(`Failed to fetch: ${error.message}. Please check the URL and try again.`, true);
         } finally {
-            toggleLoading(false);
+            setLoading(false);
         }
     }
-
-    /**
-     * Clears all inputs, messages, and results.
-     */
-    function clearAll() {
-        document.getElementById('urlInput').value = '';
-        document.getElementById('results').innerHTML = '';
-        showMessage('info', 'Fields and results cleared. Ready for a new link!');
-        toggleLoading(false); // Ensure button is reset
-    }
-
-    // Initial state setup
-    window.onload = () => {
-        // Hide initial empty message box
-        document.getElementById('messageBox').classList.add('hidden');
-    };
-
 </script>
+
 </body>
 </html>
-
-    
